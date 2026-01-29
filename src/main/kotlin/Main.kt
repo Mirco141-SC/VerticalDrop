@@ -1,4 +1,5 @@
 import engine.Tower
+import enumClasses.TowerState
 
 fun main() {
     val MAX_HEIGHT = 60.0
@@ -15,37 +16,37 @@ fun main() {
             "Passengers loaded, seatbelts locked, coaster ready to start.....\n"+
             "Is it safe to start? ${if(tower.safetyCheck(0.0)) "Yes" else "No"}"
         )
+
         Thread.sleep(5_000)
 
-        println("---- Ascent Phase ----")
+        for(i in 1..10) {
+            var currentSeconds = 1
+            var dropCountdown:Int = tower.waitingTime + 1
 
-        var currentSeconds = 0
-        while(tower.currentHeight < tower.maxHeight) {
-            tower.updateStatus(currentSeconds)
-            println("The tower is currently at ${tower.currentHeight} meters")
-
-            currentSeconds++
-        }
-
-        println(
-            "\n"+
-            "The tower has reached the top, preparing to drop in ${tower.waitingTime} seconds...."+
-            "\n"
-        )
-        Thread.sleep(5_000)
-
-        for(i in 0..9) {
-            println("---- Descent Phase $i -----")
-
-            var dropSeconds = (tower.maxHeight/tower.ascentSpeed).toInt() + tower.waitingTime
             do {
-                tower.updateStatus(dropSeconds)
-                println("The tower is currently at ${tower.currentHeight} meters")
+                val previousState = tower.currentState
+                tower.updateStatus(currentSeconds)
 
-                dropSeconds++
+                if(previousState != tower.currentState) {
+                    when(previousState) {
+                        TowerState.LOADING -> println("---- Phase $i | Ascending Phase -----\n")
+                        TowerState.ASCENT -> println("---- Phase $i | Waiting Phase ----\n")
+                        TowerState.WAITING -> println("---- Phase $i | Dropping Phase ----\n")
+                        TowerState.DROP -> if(!tower.isLocked)  println("\n\n---- Phase ${i + 1} | Loading Phase ---") else  println("\n\n---- Phase ${i + 1} | Ascending Phase ---")
+                    }
+                }
+
+                if(tower.currentState == TowerState.WAITING) {
+                    dropCountdown -= 1
+
+                    println("The tower is currently waiting $dropCountdown to drop")
+                } else {
+                    println("The tower is currently at ${tower.currentHeight} meters")
+                }
+
+                Thread.sleep(1_000)
+                currentSeconds++
             } while(tower.currentHeight > 0)
-
-            println("\n\n")
         }
 
         tower.isLocked = false
